@@ -164,7 +164,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      sub2api-redis:
         condition: service_healthy
     networks:
       - sub2api-network
@@ -225,7 +225,7 @@ services:
   # ===========================================================================
   # Redis Cache
   # ===========================================================================
-  redis:
+  sub2api-redis:
     image: redis:8-alpine
     container_name: sub2api-redis
     restart: unless-stopped
@@ -247,7 +247,9 @@ services:
       # REDISCLI_AUTH is used by redis-cli for authentication (safer than -a flag)
       - REDISCLI_AUTH=${REDIS_PASSWORD:-}
     networks:
-      - sub2api-network
+      sub2api-network:
+        aliases:
+          - redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

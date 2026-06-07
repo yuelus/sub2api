@@ -3017,6 +3017,13 @@ export default {
       dataImportErrors: 'Error Details',
       dataImportSuccess: 'Import completed: accounts {account_created}, failed {account_failed}',
       dataImportCompletedWithErrors: 'Import completed with errors: account failed {account_failed}, proxy failed {proxy_failed}',
+      cpaImport: 'Import CPA Format',
+      cpaImportTitle: 'Import CPA Format',
+      cpaImportHint: 'Select CPA JSON files. They will be converted and imported as accounts.',
+      cpaImportFile: 'CPA file',
+      cpaImportSelectFile: 'Please select CPA files',
+      cpaImportFileCount: '{count} files selected',
+      cpaImportNoValidAccounts: 'No valid CPA accounts to import',
       syncFromCrsTitle: 'Sync Accounts from CRS',
       syncFromCrsDesc:
         'Sync accounts from claude-relay-service (CRS) into this system (CRS is called server-to-server).',

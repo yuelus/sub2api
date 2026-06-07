@@ -3093,6 +3093,13 @@ export default {
       dataImportErrors: '失败详情',
       dataImportSuccess: '导入完成：账号 {account_created}，失败 {account_failed}',
       dataImportCompletedWithErrors: '导入完成但有错误：账号失败 {account_failed}，代理失败 {proxy_failed}',
+      cpaImport: '导入CPA格式',
+      cpaImportTitle: '导入CPA格式',
+      cpaImportHint: '选择 CPA 格式 JSON 文件，自动转换后导入账号。',
+      cpaImportFile: 'CPA 文件',
+      cpaImportSelectFile: '请选择 CPA 文件',
+      cpaImportFileCount: '已选择 {count} 个文件',
+      cpaImportNoValidAccounts: '没有可导入的有效 CPA 账号',
       syncFromCrsTitle: '从 CRS 同步账号',
       syncFromCrsDesc:
         '将 claude-relay-service（CRS）中的账号同步到当前系统（不会在浏览器侧直接请求 CRS）。',
