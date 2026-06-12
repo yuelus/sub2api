@@ -13,6 +13,11 @@
         </div>
         <input ref="fileInput" type="file" class="hidden" accept="application/json,.json" multiple @change="handleFileChange" />
       </div>
+      <div>
+        <label class="input-label">{{ t('admin.accounts.dataImportGroups') }}</label>
+        <GroupSelector v-model="groupIds" :groups="groups" :show-label="false" />
+        <p class="input-hint">{{ t('admin.accounts.dataImportGroupsHint') }}</p>
+      </div>
     </form>
 
     <template #footer>
@@ -30,29 +35,35 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import GroupSelector from '@/components/common/GroupSelector.vue'
 import { adminAPI } from '@/api/admin'
 import { useAppStore } from '@/stores/app'
-import type { AdminDataAccount } from '@/types'
+import type { AdminDataAccount, AdminGroup } from '@/types'
 
-interface Props { show: boolean }
+interface Props { show: boolean; groups?: AdminGroup[] }
 interface Emits {
   (e: 'close'): void
   (e: 'imported'): void
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  groups: () => []
+})
 const emit = defineEmits<Emits>()
 const { t } = useI18n()
 const appStore = useAppStore()
 
 const importing = ref(false)
 const files = ref<File[]>([])
+const groupIds = ref<number[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 const fileText = computed(() => files.value.length > 1 ? t('admin.accounts.cpaImportFileCount', { count: files.value.length }) : files.value[0]?.name || '')
+const groups = computed(() => props.groups)
 
 watch(() => props.show, (open) => {
   if (!open) return
   files.value = []
+  groupIds.value = []
   if (fileInput.value) fileInput.value.value = ''
 })
 
@@ -134,9 +145,11 @@ const handleImport = async () => {
       return
     }
 
+    const selectedGroupIds = [...groupIds.value]
     const res = await adminAPI.accounts.importData({
       data: { exported_at: new Date().toISOString(), proxies: [], accounts },
-      skip_default_group_bind: true
+      skip_default_group_bind: true,
+      group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined
     })
 
     const msgParams: Record<string, unknown> = {

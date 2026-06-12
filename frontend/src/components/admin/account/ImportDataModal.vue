@@ -23,7 +23,7 @@
         >
           <div class="min-w-0">
             <div class="truncate text-sm text-gray-700 dark:text-dark-200">
-              {{ fileName || t('admin.accounts.dataImportSelectFile') }}
+              {{ fileText || t('admin.accounts.dataImportSelectFile') }}
             </div>
             <div class="text-xs text-gray-500 dark:text-dark-400">JSON (.json)</div>
           </div>
@@ -36,8 +36,15 @@
           type="file"
           class="hidden"
           accept="application/json,.json"
+          multiple
           @change="handleFileChange"
         />
+      </div>
+
+      <div>
+        <label class="input-label">{{ t('admin.accounts.dataImportGroups') }}</label>
+        <GroupSelector v-model="groupIds" :groups="groups" :show-label="false" />
+        <p class="input-hint">{{ t('admin.accounts.dataImportGroupsHint') }}</p>
       </div>
 
       <div
@@ -59,7 +66,7 @@
             class="mt-2 max-h-48 overflow-auto rounded-lg bg-gray-50 p-3 font-mono text-xs dark:bg-dark-800"
           >
             <div v-for="(item, idx) in errorItems" :key="idx" class="whitespace-pre-wrap">
-              {{ item.kind }} {{ item.name || item.proxy_key || '-' }} — {{ item.message }}
+              {{ item.kind }} {{ item.name || item.proxy_key || '-' }} - {{ item.message }}
             </div>
           </div>
         </div>
@@ -88,12 +95,14 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import GroupSelector from '@/components/common/GroupSelector.vue'
 import { adminAPI } from '@/api/admin'
 import { useAppStore } from '@/stores/app'
-import type { AdminDataImportResult } from '@/types'
+import type { AdminDataImportResult, AdminDataPayload, AdminGroup } from '@/types'
 
 interface Props {
   show: boolean
+  groups?: AdminGroup[]
 }
 
 interface Emits {
@@ -101,26 +110,34 @@ interface Emits {
   (e: 'imported'): void
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  groups: () => []
+})
 const emit = defineEmits<Emits>()
 
 const { t } = useI18n()
 const appStore = useAppStore()
 
 const importing = ref(false)
-const file = ref<File | null>(null)
+const files = ref<File[]>([])
+const groupIds = ref<number[]>([])
 const result = ref<AdminDataImportResult | null>(null)
 
 const fileInput = ref<HTMLInputElement | null>(null)
-const fileName = computed(() => file.value?.name || '')
+const fileText = computed(() => {
+  if (files.value.length > 1) return t('admin.accounts.dataImportFileCount', { count: files.value.length })
+  return files.value[0]?.name || ''
+})
 
+const groups = computed(() => props.groups)
 const errorItems = computed(() => result.value?.errors || [])
 
 watch(
   () => props.show,
   (open) => {
     if (open) {
-      file.value = null
+      files.value = []
+      groupIds.value = []
       result.value = null
       if (fileInput.value) {
         fileInput.value.value = ''
@@ -135,7 +152,7 @@ const openFilePicker = () => {
 
 const handleFileChange = (event: Event) => {
   const target = event.target as HTMLInputElement
-  file.value = target.files?.[0] || null
+  files.value = Array.from(target.files || []).sort((a, b) => a.name.localeCompare(b.name))
 }
 
 const handleClose = () => {
@@ -161,35 +178,63 @@ const readFileAsText = async (sourceFile: File): Promise<string> => {
   })
 }
 
+const emptyImportResult = (): AdminDataImportResult => ({
+  proxy_created: 0,
+  proxy_reused: 0,
+  proxy_failed: 0,
+  account_created: 0,
+  account_failed: 0,
+  errors: []
+})
+
+const mergeResult = (target: AdminDataImportResult, source: AdminDataImportResult) => {
+  target.proxy_created += source.proxy_created || 0
+  target.proxy_reused += source.proxy_reused || 0
+  target.proxy_failed += source.proxy_failed || 0
+  target.account_created += source.account_created || 0
+  target.account_failed += source.account_failed || 0
+  if (source.errors?.length) {
+    target.errors = [...(target.errors || []), ...source.errors]
+  }
+}
+
 const handleImport = async () => {
-  if (!file.value) {
+  if (files.value.length === 0) {
     appStore.showError(t('admin.accounts.dataImportSelectFile'))
     return
   }
 
   importing.value = true
   try {
-    const text = await readFileAsText(file.value)
-    const dataPayload = JSON.parse(text)
+    const aggregate = emptyImportResult()
+    const selectedGroupIds = [...groupIds.value]
 
-    const res = await adminAPI.accounts.importData({
-      data: dataPayload,
-      skip_default_group_bind: true
-    })
+    for (const file of files.value) {
+      const text = await readFileAsText(file)
+      const dataPayload = JSON.parse(text) as AdminDataPayload
+      const res = await adminAPI.accounts.importData({
+        data: dataPayload,
+        skip_default_group_bind: true,
+        group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined
+      })
+      mergeResult(aggregate, res)
+    }
 
-    result.value = res
+    result.value = aggregate
 
     const msgParams: Record<string, unknown> = {
-      account_created: res.account_created,
-      account_failed: res.account_failed,
-      proxy_created: res.proxy_created,
-      proxy_reused: res.proxy_reused,
-      proxy_failed: res.proxy_failed,
+      account_created: aggregate.account_created,
+      account_failed: aggregate.account_failed,
+      proxy_created: aggregate.proxy_created,
+      proxy_reused: aggregate.proxy_reused,
+      proxy_failed: aggregate.proxy_failed,
     }
-    if (res.account_failed > 0 || res.proxy_failed > 0) {
+    if (aggregate.account_failed > 0 || aggregate.proxy_failed > 0) {
       appStore.showError(t('admin.accounts.dataImportCompletedWithErrors', msgParams))
     } else {
       appStore.showSuccess(t('admin.accounts.dataImportSuccess', msgParams))
+    }
+    if (aggregate.account_created > 0 || aggregate.proxy_created > 0) {
       emit('imported')
     }
   } catch (error: any) {

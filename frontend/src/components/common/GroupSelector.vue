@@ -1,6 +1,6 @@
 <template>
   <div>
-    <label class="input-label">
+    <label v-if="showLabel" class="input-label">
       {{ t('admin.users.groups') }}
       <span class="font-normal text-gray-400">{{ t('common.selectedCount', { count: modelValue.length }) }}</span>
     </label>
@@ -71,10 +71,12 @@ interface Props {
   platform?: GroupPlatform // Optional platform filter
   mixedScheduling?: boolean // For antigravity accounts: allow anthropic/gemini groups
   searchable?: boolean | 'auto'
+  showLabel?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  searchable: 'auto'
+  searchable: 'auto',
+  showLabel: true
 })
 const emit = defineEmits<{
   'update:modelValue': [value: number[]]

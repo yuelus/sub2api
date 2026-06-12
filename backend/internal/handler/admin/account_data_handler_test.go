@@ -262,6 +262,7 @@ func TestImportDataReusesProxyAndSkipsDefaultGroup(t *testing.T) {
 			},
 		},
 		"skip_default_group_bind": true,
+		"group_ids":               []int64{9, 9, 0},
 	}
 
 	body, _ := json.Marshal(dataPayload)
@@ -274,4 +275,5 @@ func TestImportDataReusesProxyAndSkipsDefaultGroup(t *testing.T) {
 	require.Len(t, adminSvc.createdProxies, 0)
 	require.Len(t, adminSvc.createdAccounts, 1)
 	require.True(t, adminSvc.createdAccounts[0].SkipDefaultGroupBind)
+	require.Equal(t, []int64{9}, adminSvc.createdAccounts[0].GroupIDs)
 }
