@@ -466,7 +466,7 @@
                   {{ loading ? t('admin.accounts.oauth.generating') : oauthGenerateAuthUrl }}
                 </button>
                 <div v-else class="space-y-3">
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <input
                       :value="authUrl"
                       readonly
@@ -475,8 +475,18 @@
                     />
                     <button
                       type="button"
+                      class="btn btn-primary shrink-0 px-3"
+                      :title="t('admin.accounts.oauth.openAuthUrl')"
+                      data-testid="oauth-open-auth-url"
+                      @click="handleOpenUrl"
+                    >
+                      <Icon name="externalLink" size="sm" class="sm:mr-1.5" />
+                      <span class="hidden sm:inline">{{ t('admin.accounts.oauth.openAuthUrl') }}</span>
+                    </button>
+                    <button
+                      type="button"
                       class="btn btn-secondary p-2"
-                      title="Copy URL"
+                      :title="t('admin.accounts.oauth.copyAuthUrl')"
                       @click="handleCopyUrl"
                     >
                       <svg
@@ -806,8 +816,13 @@ const handleGenerateUrl = () => {
 
 const handleCopyUrl = () => {
   if (props.authUrl) {
-    copyToClipboard(props.authUrl, 'URL copied to clipboard')
+    copyToClipboard(props.authUrl, t('admin.accounts.oauth.authUrlCopied'))
   }
+}
+
+const handleOpenUrl = () => {
+  if (!props.authUrl) return
+  window.open(props.authUrl, '_blank', 'noopener,noreferrer')
 }
 
 const handleRegenerate = () => {
